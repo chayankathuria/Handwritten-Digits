@@ -20,3 +20,49 @@ def norm_pixels(train, test):
     test_norm = test_norm / 255.0
     # return normalized images
     return train_norm, test_norm
+
+# Defining the model:
+
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.optimizers import SGD
+
+# define cnn model
+def define_model():
+    model = Sequential()
+    model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', input_shape=(28, 28, 1)))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Flatten())
+    model.add(Dense(100, activation='relu', kernel_initializer='he_uniform'))
+    model.add(Dense(10, activation='softmax'))
+    # compile model
+    opt = SGD(lr=0.01, momentum=0.9)
+    model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    return model
+
+# Evaluating the Model:
+
+from sklearn.model_selection import KFold
+# evaluate a model using k-fold cross-validation
+def evaluate_model(dataX, dataY, n_folds=5):
+    scores, histories = list(), list()
+    # prepare cross validation
+    kfold = KFold(n_folds, shuffle=True, random_state=1)
+    # enumerate splits
+    for train_ix, test_ix in kfold.split(dataX):
+        # define model
+        model = define_model()
+        # select rows for train and test
+        trainX, trainY, testX, testY = dataX[train_ix], dataY[train_ix], dataX[test_ix], dataY[test_ix]
+        # fit model
+        history = model.fit(trainX, trainY, epochs=10, batch_size=32, validation_data=(testX, testY), verbose=0)
+        # evaluate model
+        acc = model.evaluate(testX, testY, verbose=0)
+        print('> %.3f' % (acc * 100.0))
+        # stores scores
+        scores.append(acc)
+    histories.append(history)
+    return scores, histories
